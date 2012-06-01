@@ -1,7 +1,8 @@
 from django.http import HttpResponse, HttpResponseRedirect
 from django.core.urlresolvers import reverse
 from django.shortcuts import render_to_response
-from omeroweb.webgateway.views import getBlitzConnection, _session_logout
+#from omeroweb.webgateway.views import getBlitzConnection, _session_logout
+from omeroweb.webclient.decorators import login_required
 from omeroweb.webgateway import views as webgateway_views
 from omeroweb.webadmin.custom_models import Server
 
@@ -15,50 +16,15 @@ import webmobile_util
 
 logger = logging.getLogger(__name__)
     
-    
-def isUserConnected (f):
-    """ 
-    connection decorator (wraps methods that require connection) - adapted from webclient.views
-    retrieves connection and passes it to the wrapped method in kwargs
-    TODO: would be nice to refactor isUserConnected from webclient to be usable from here. 
-    """
-    def wrapped (request, *args, **kwargs):
-        #this check the connection exist, if not it will redirect to login page
-        url = request.REQUEST.get('url')
-        if url is None or len(url) == 0:
-            if request.META.get('QUERY_STRING'):
-                url = '%s?%s' % (request.META.get('PATH_INFO'), request.META.get('QUERY_STRING'))
-            else:
-                url = '%s' % (request.META.get('PATH_INFO'))
-        
-        conn = None
-        loginUrl = reverse("webmobile_login")
-        try:
-            conn = getBlitzConnection(request, useragent="OMERO.webmobile")
-        except Exception, x:
-            logger.error(traceback.format_exc())
-            return HttpResponseRedirect("%s?error=%s&url=%s" % (loginUrl, str(x), url))
-            
-        # if we failed to connect - redirect to login page, passing the destination url
-        if conn is None:
-            return HttpResponseRedirect("%s?url=%s" % (loginUrl, url))
-        
-        # if we got a connection, pass it to the wrapped method in kwargs
-        kwargs["error"] = request.REQUEST.get('error')
-        kwargs["conn"] = conn
-        kwargs["url"] = url
-        return f(request, *args, **kwargs)
-    return wrapped
+
+# loginUrl = reverse("webmobile_login")
 
 
-def groups_members(request):
+@login_required()
+def groups_members(request, conn=None, **kwargs):
     """
     List the users of the current group - if permitted
     """
-    conn = getBlitzConnection (request, useragent="OMERO.webmobile")
-    if conn is None or not conn.isConnected():
-        return HttpResponseRedirect(reverse('webmobile_login'))
-    
     groupId = conn.getEventContext().groupId
     showMembers = True
     if str(conn.getEventContext().groupPermissions) == "rw----":
@@ -81,14 +47,12 @@ def groups_members(request):
     return render_to_response('webmobile/groups_members.html', {'client': conn, 'showMembers': showMembers, 
         'members': members, 'groups': groups})
     
-    
-def switch_group(request, groupId):
+
+@login_required()
+def switch_group(request, groupId, conn=None, **kwargs):
     """
     Switch to the specified group, then redirect to index. 
     """
-    conn = getBlitzConnection (request, useragent="OMERO.webmobile")
-    if conn is None or not conn.isConnected():
-        return HttpResponseRedirect(reverse('webmobile_login'))
     
     from webclient.views import change_active_group
     try:
@@ -101,14 +65,9 @@ def switch_group(request, groupId):
     return HttpResponseRedirect(reverse('webmobile_index'))
  
  
-@isUserConnected
-def change_active_group(request, groupId, **kwargs):
-    try:
-        conn = kwargs["conn"]
-    except:
-        logger.error(traceback.format_exc())
-        return handlerInternalError("Connection is not available. Please contact your administrator.")
-    
+@login_required()
+def change_active_group(request, groupId, conn=None, **kwargs):
+
     url = reverse('webmobile_index')
     
     server = request.session.get('server')
@@ -146,12 +105,10 @@ def change_active_group(request, groupId, **kwargs):
     
     return HttpResponseRedirect(url)   
     
-    
-def viewer(request, imageId):
-    conn = getBlitzConnection (request, useragent="OMERO.webmobile")
-    if conn is None or not conn.isConnected():
-        return HttpResponseRedirect(reverse('webmobile_login'))
-        
+
+@login_required()
+def viewer(request, imageId, conn=None, **kwargs):
+
     image = conn.getObject("Image", imageId)
     w = image.getSizeX()
     h = image.getSizeY()
@@ -159,15 +116,9 @@ def viewer(request, imageId):
     return render_to_response('webmobile/viewers/viewer_iphone.html', {'image':image})
     
 
-@isUserConnected
-def viewer_big(request, imageId, **kwargs):
-    conn = None
-    try:
-        conn = kwargs["conn"]
-    except:
-        logger.error(traceback.format_exc())
-        return HttpResponse(traceback.format_exc())
-        
+@login_required()
+def viewer_big(request, imageId, conn=None, **kwargs):
+
     image = conn.getImage(imageId)
     w = image.getWidth() 
     h = image.getHeight() 
@@ -176,17 +127,10 @@ def viewer_big(request, imageId, **kwargs):
     return render_to_response('webmobile/viewers/big_iphone.html', {'image':image, 'w':w, 'h': h, 'z':z})
     
     
-@isUserConnected
-def projects (request, eid=None, **kwargs):
+@login_required()
+def projects (request, eid=None, conn=None, **kwargs):
     """ List the projects owned by the current user, or another user specified by eId """
     
-    conn = None
-    try:
-        conn = kwargs["conn"]
-    except:
-        logger.error(traceback.format_exc())
-        return HttpResponse(traceback.format_exc())
-        
     #projects = filter(lambda x: x.isOwned(), conn.listProjects())
     #eId = request.REQUEST.get('experimenter', None)
     experimenter = None
@@ -211,32 +155,18 @@ def projects (request, eid=None, **kwargs):
         { 'client':conn, 'projects':projs, 'datasets':orphanedDatasets, 'experimenter':experimenter })
 
 
-@isUserConnected
-def project(request, id, **kwargs):
+@login_required()
+def project(request, id, conn=None, **kwargs):
     """ Show datasets belonging to the specified project """
     
-    conn = None
-    try:
-        conn = kwargs["conn"]
-    except:
-        logger.error(traceback.format_exc())
-        return HttpResponse(traceback.format_exc())
-        
     prj = conn.getObject("Project", id)
     return render_to_response('webmobile/browse/project.html', {'client':conn, 'project':prj})
 
 
-@isUserConnected
-def object_details(request, obj_type, id, **kwargs):
+@login_required()
+def object_details(request, obj_type, id, conn=None, **kwargs):
     """ Show project/dataset details: Name, description, owner, annotations etc """
-    
-    conn = None
-    try:
-        conn = kwargs["conn"]
-    except:
-        logger.error(traceback.format_exc())
-        return HttpResponse(traceback.format_exc())
-        
+
     if obj_type == 'project':
         obj = conn.getObject("Project", id)
         title = 'Project'
@@ -251,64 +181,35 @@ def object_details(request, obj_type, id, **kwargs):
         'annotations':anns, 'obj_type': obj_type})
 
 
-@isUserConnected
-def dataset(request, id, **kwargs):
+@login_required()
+def dataset(request, id, conn=None, **kwargs):
     """ Show images in the specified dataset """
-    
-    conn = None
-    try:
-        conn = kwargs["conn"]
-    except:
-        logger.error(traceback.format_exc())
-        return HttpResponse(traceback.format_exc())
-        
+
     ds = conn.getObject("Dataset", id)
     return render_to_response('webmobile/browse/dataset.html', {'client': conn, 'dataset': ds})
     
         
-@isUserConnected
-def image(request, imageId, **kwargs):
+@login_required()
+def image(request, imageId, conn=None, **kwargs):
     """ Show image summary: Name, dimensions, large thumbnail, description, annotations """
-    
-    conn = None
-    try:
-        conn = kwargs["conn"]
-    except:
-        logger.error(traceback.format_exc())
-        return HttpResponse(traceback.format_exc())
-        
+
     img = conn.getObject("Image", imageId)
     anns = getAnnotations(img)
     
     return render_to_response('webmobile/browse/image.html', {'client': conn, 'object':img, 'obj_type':'image',
         'annotations': anns})
     
-@isUserConnected
-def orphaned_images(request, eid, **kwargs):
+@login_required()
+def orphaned_images(request, eid, conn=None, **kwargs):
     """ Show image summary: Name, dimensions, large thumbnail, description, annotations """
-    
-    conn = None
-    try:
-        conn = kwargs["conn"]
-    except:
-        logger.error(traceback.format_exc())
-        return HttpResponse(traceback.format_exc())
-    
+
     orphans = conn.listOrphans("Image", eid=eid)
     return render_to_response('webmobile/browse/orphaned_images.html', {'client': conn, 'orphans':orphans})
 
 
-@isUserConnected
-def screens(request, eid=None, **kwargs):
+@login_required()
+def screens(request, eid=None, conn=None, **kwargs):
     """  """
-    
-    conn = None
-    try:
-        conn = kwargs["conn"]
-    except:
-        logger.error(traceback.format_exc())
-        return HttpResponse(traceback.format_exc())
-
     experimenter = None
     if eid is not None:
         experimenter = conn.getObject("Experimenter", eid)
@@ -330,32 +231,18 @@ def screens(request, eid=None, **kwargs):
         {'client':conn, 'screens':scrs, 'orphans':orphanedPlates, 'experimenter':experimenter })
  
 
-@isUserConnected
-def screen(request, id, **kwargs):
+@login_required()
+def screen(request, id, conn=None, **kwargs):
     """ Show plates in the specified scren """
-    
-    conn = None
-    try:
-        conn = kwargs["conn"]
-    except:
-        logger.error(traceback.format_exc())
-        return HttpResponse(traceback.format_exc())
-        
+
     scrn = conn.getObject("Screen", id)
     return render_to_response('webmobile/browse/screen.html', {'client': conn, 'screen': scrn})   
 
 
-@isUserConnected
-def plate(request, id, **kwargs):
+@login_required()
+def plate(request, id, conn=None, **kwargs):
     """ Show plate - grid of thumbs? """
     
-    conn = None
-    try:
-        conn = kwargs["conn"]
-    except:
-        logger.error(traceback.format_exc())
-        return HttpResponse(traceback.format_exc())
-        
     scrn = conn.getObject("Screen", id)
     return render_to_response('webmobile/browse/screen.html', {'client': conn, 'screen': scrn})
 
@@ -386,20 +273,13 @@ def getAnnotations(obj):
     return {"comments":comments, "ratings":ratings, "files":files, "tags":tags}
 
 
-@isUserConnected
-def edit_object(request, obj_type, obj_id, **kwargs):
+@login_required()
+def edit_object(request, obj_type, obj_id, conn=None, **kwargs):
     """
     Display a page for editing Name and Description of Project/Dataset/Image etc
     Page 'submit' redirects here with 'name' and 'description' in POST, which 
     will do the edit and return to the object_details page. 
     """
-    conn = None
-    try:
-        conn = kwargs["conn"]
-    except:
-        logger.error(traceback.format_exc())
-        return HttpResponse(traceback.format_exc())
-    
     if obj_type == 'image': 
         obj = conn.getObject("Image", obj_id)
         title = 'Image'
@@ -427,19 +307,12 @@ def edit_object(request, obj_type, obj_id, **kwargs):
     return render_to_response('webmobile/browse/edit_object.html', {'client': conn, 'title':title, 'object':obj})
     
 
-@isUserConnected
-def add_comment(request, obj_type, obj_id, **kwargs):
+@login_required()
+def add_comment(request, obj_type, obj_id, conn=None, **kwargs):
     """
     Adds a comment (from request 'comment') to object 'project', 'dataset', 'image' then 
     redirects to the 'details' page for that object: E.g. project_details page etc. 
     """
-    conn = None
-    try:
-        conn = kwargs["conn"]
-    except:
-        logger.error(traceback.format_exc())
-        return HttpResponse(traceback.format_exc())
-    
     from omero.rtypes import rstring
     
     redirect = reverse('webmobile_index')   # default
@@ -472,50 +345,18 @@ def add_comment(request, obj_type, obj_id, **kwargs):
     return HttpResponseRedirect(redirect)
 
 
-def login (request):
-    if request.method == 'POST' and request.REQUEST['server']:
-        blitz = Server.get(pk=request.REQUEST['server'])
-        request.session['server'] = blitz.id
-        request.session['host'] = blitz.host
-        request.session['port'] = blitz.port
-    
-    conn = getBlitzConnection (request, useragent="OMERO.webmobile")
-    logger.debug(conn)
-    
-    url = request.REQUEST.get("url")
-    
-    if conn is None:
-        return render_to_response('webmobile/login.html', {'gw':Server, 'url': url})
-        
-    if url is not None and len(url) != 0:
-        return HttpResponseRedirect(url)
-    else:
-        return HttpResponseRedirect(reverse('webmobile_index'))
-    
-
 def logout (request):
-    _session_logout(request, request.session['server'])
     try:
-        del request.session['username']
-    except KeyError:
-        logger.error(traceback.format_exc())
-    try:
-        del request.session['password']
-    except KeyError:
-        logger.error(traceback.format_exc())
-
-    #request.session.set_expiry(1)
-    return HttpResponseRedirect(reverse('webmobile_login'))
-
-@isUserConnected
-def index (request, eid=None, **kwargs):
-    conn = None
-    try:
-        conn = kwargs["conn"]
+        conn.seppuku()
     except:
-        logger.error(traceback.format_exc())
-        return HttpResponse(traceback.format_exc())
-    
+        logger.error('Exception during logout.', exc_info=True)
+    finally:
+        request.session.flush()
+    return HttpResponseRedirect(reverse("webmobile_index"))
+
+@login_required()
+def index (request, eid=None, conn=None, **kwargs):
+
     experimenter = None
     if eid is not None:
         experimenter = conn.getObject("Experimenter", eid)
@@ -523,14 +364,8 @@ def index (request, eid=None, **kwargs):
     return render_to_response('webmobile/index.html', {'client': conn, 'experimenter': experimenter})
 
 
-@isUserConnected
-def recent (request, obj_type, eid=None, **kwargs):
-    conn = None
-    try:
-        conn = kwargs["conn"]
-    except:
-        logger.error(traceback.format_exc())
-        return HttpResponse(traceback.format_exc())
+@login_required()
+def recent (request, obj_type, eid=None, conn=None, **kwargs):
     
     experimenter = None
     if eid:
@@ -559,49 +394,32 @@ def recent (request, obj_type, eid=None, **kwargs):
     return render_to_response('webmobile/timeline/recent.html', {'client':conn, 'recent':recentResults, 
         'exp':experimenter, 'members':members, 'obj_type':str(obj_type) })
 
-@isUserConnected
-def recent_full_page (request, **kwargs):
+@login_required()
+def recent_full_page (request, conn=None, **kwargs):
     """
     Mock-up full page for Usability testing of recent views. 
     """
-    conn = None
-    try:
-        conn = kwargs["conn"]
-    except:
-        logger.error(traceback.format_exc())
-        return HttpResponse(traceback.format_exc())
-    
     exp = conn.getObject("Experimenter", conn.getEventContext().userId)
         
     return render_to_response('webmobile/timeline/recent_full_page.html', {'client':conn, 'exp':exp })
     
     
 
-@isUserConnected
-def collab_annotations (request, myData=True, **kwargs):
+@login_required()
+def collab_annotations (request, myData=True, conn=None, **kwargs):
     """
     Page displays recent annotations of OTHER users on MY data (myData=True) or
     MY annotations on data belonging to OTHER users. 
     """
-    conn = None
-    try:
-        conn = kwargs["conn"]
-    except:
-        logger.error(traceback.format_exc())
-        return HttpResponse(traceback.format_exc())
-        
     collabAnns = webmobile_util.listCollabAnnotations(conn, myData)
     
     return render_to_response('webmobile/timeline/recent_collab.html', {'client':conn, 'recent':collabAnns, 'myData':myData })
     
 
-def image_viewer (request, iid, **kwargs):
+@login_required()
+def image_viewer (request, iid, conn=None, **kwargs):
     """ This view is responsible for showing pixel data as images """
-    
-    conn = getBlitzConnection (request, useragent="OMERO.webmobile")
-    if conn is None or not conn.isConnected():
-        return HttpResponseRedirect(reverse('webmobile_login'))
-    
+
     kwargs['viewport_server'] = '/webclient'
     
     return webgateway_views.full_viewer(request, iid, _conn=conn, **kwargs)

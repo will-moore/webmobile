@@ -7,8 +7,8 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 <title>Scrolling DIV demo on iPhone / iPod Touch / Android / iPad</title>
 
-<script type="text/javascript" src="{% url mobile_static 'js/iscroll.js?v3.7.1' %}"></script>
-<script type="text/javascript" src="{% url webstatic "javascript/jquery_1.3.2.js" %}"></script>
+<script type="text/javascript" src="{% static 'webmobile/js/iscroll.js?v3.7.1' %}"></script>
+{% include "webgateway/base/includes/script_src_jquery.html" %}
 
 <script type="text/javascript">
 

@@ -4,20 +4,20 @@
 {% block meta %}<meta name="viewport" content="width=device-width; initial-scale=1.0; maximum-scale=1.0; user-scalable=0;">{% endblock %}
 
 {% block link %} 
-    <link rel="stylesheet" href="{% url mobile_static 'css/index.css' %}" type="text/css" />
+    <link rel="stylesheet" href="{% static 'webmobile/css/index.css' %}" type="text/css" />
 {% endblock %}
 
 {% block jscript %}
     
 {% endblock %}
 
-{% block title %} OMERO mobile: {{ client.user.getName }} {% endblock %}
+{% block title %} OMERO mobile: {{ ome.user.getFullName }} {% endblock %}
 
 
 {% block body %}
 <div id="top-header">
     <a href="{% url webmobile_index %}">
-        <div style="float:left"><img src="{% url mobile_static 'img/logo.png' %}" border=0 /></div>
+        <div style="float:left"><img src="{% static 'webmobile/img/logo.png' %}" border=0 /></div>
     </a>
     <div id="top-header-right">
         Group: <a href="{% url webmobile_groups_members %}">
