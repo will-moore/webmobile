@@ -139,8 +139,8 @@ img#imagePlane {
 
 
 {% block jscript %}
-    <script type="text/javascript" src="{% url webstatic "javascript/jquery_1.4.2.js" %}"></script>
-    <script type="text/javascript" src="{% url mobile_static 'js/viewer.js' %}"></script>
+    {% include "webgateway/base/includes/script_src_jquery.html" %}
+    <script type="text/javascript" src="{% static 'webmobile/js/viewer.js' %}"></script>
 {% endblock %}
 
 {% block body %}
