@@ -4,7 +4,6 @@ from django.shortcuts import render_to_response
 #from omeroweb.webgateway.views import getBlitzConnection, _session_logout
 from omeroweb.webclient.decorators import login_required
 from omeroweb.webgateway import views as webgateway_views
-from omeroweb.webadmin.custom_models import Server
 
 import settings
 import logging
@@ -63,48 +62,7 @@ def switch_group(request, groupId, conn=None, **kwargs):
         return HttpResponse(traceback.format_exc())
         
     return HttpResponseRedirect(reverse('webmobile_index'))
- 
- 
-@login_required()
-def change_active_group(request, groupId, conn=None, **kwargs):
 
-    url = reverse('webmobile_index')
-    
-    server = request.session.get('server')
-    username = request.session.get('username')
-    password = request.session.get('password')
-    ssl = request.session.get('ssl')
-    version = request.session.get('version')
-       
-    webgateway_views._session_logout(request, request.session.get('server'))
-    
-    blitz = Server.get(pk=server) 
-    request.session['server'] = blitz.id
-    request.session['host'] = blitz.host
-    request.session['port'] = blitz.port
-    request.session['username'] = username
-    request.session['password'] = password
-    request.session['ssl'] = (True, False)[request.REQUEST.get('ssl') is None]
-    request.session['clipboard'] = {'images': None, 'datasets': None, 'plates': None}
-    request.session['shares'] = dict()
-    request.session['imageInBasket'] = set()
-    blitz_host = "%s:%s" % (blitz.host, blitz.port)
-    request.session['nav']={"error": None, "blitz": blitz_host, "menu": "start", "view": "icon", "basket": 0, "experimenter":None, 'callback':dict()}
-    
-    #conn = getBlitzConnection(request, useragent="OMERO.webmobile")
-
-    if conn.changeActiveGroup(groupId):
-        request.session.modified = True                
-    else:
-        error = 'You cannot change your group becuase the data is currently processing. You can force it by logging out and logging in again.'
-        url = reverse("webindex")+ ("?error=%s" % error)
-        if request.session.get('nav')['experimenter'] is not None:
-            url += "&experimenter=%s" % request.session.get('nav')['experimenter']
-    
-    request.session['version'] = conn.getServerVersion()
-    
-    return HttpResponseRedirect(url)   
-    
 
 @login_required()
 def viewer(request, imageId, conn=None, **kwargs):
