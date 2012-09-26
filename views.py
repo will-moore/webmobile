@@ -85,7 +85,7 @@ def viewer_big(request, imageId, conn=None, **kwargs):
     return render_to_response('webmobile/viewers/big_iphone.html', {'image':image, 'w':w, 'h': h, 'z':z})
     
     
-@login_required()
+@login_required(setGroupContext=True)
 def projects (request, eid=None, conn=None, **kwargs):
     """ List the projects owned by the current user, or another user specified by eId """
     
