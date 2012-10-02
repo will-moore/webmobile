@@ -4,12 +4,6 @@
     OMERO mobile:
 {% endblock %}
 
-{% block header-right %}
-    {% if experimenter %}
-        <a href="{% url webmobile_groups_members %}">{{ experimenter.getFullName }} ></a>
-    {% endif %}
-{% endblock %}
-
 
 {% block content %}
 
@@ -61,18 +55,6 @@
         <div class="tab-item">
             Projects
         </div>
-    </a>
-
-    <div style="clear:both"></div>
-</div>
-
-<div class="sub-header">
-    Switch:
-</div>
-
-<div class='list-item'>
-    <a href="{% url webmobile_groups_members %}">
-        <div class="tab-item">User</div></a>
     </a>
 
     <div style="clear:both"></div>

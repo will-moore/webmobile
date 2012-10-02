@@ -1,0 +1,55 @@
+{% extends "webmobile/base/base_header.html" %}
+
+{% block title %} Choose User {% endblock %}
+
+
+{% block header-title %}
+    Choose User
+{% endblock %}
+
+{% block content %}
+
+<div class="subtitle">
+    Owners
+</div>
+
+<div class="list-container">
+{% for user in group.leaders %}
+    <a href="{% url webmobile_switch_user user.id %}">
+        <div class="{% ifequal user.id ome.user_id %} item-selected {% else %} item-name {% endifequal %}">
+            
+            {{ user.getFullName }}
+            
+            {% ifequal user.id ome.user_id %}
+                <img style="float:right" src="{% url mobile_static 'img/check-mark.png' %}" width=25 height=25 border=0/>
+            {% endifequal %}
+        </div>
+        
+    </a>
+{% endfor %}
+</div>
+
+
+<div class="subtitle">
+    Members
+</div>
+
+<div class="list-container">
+{% for user in group.colleagues %}
+    <a href="{% url webmobile_switch_user user.id %}">
+        <div class="{% ifequal user.id ome.user_id %} item-selected {% else %} item-name {% endifequal %}">
+            
+            {{ user.getFullName }}
+            
+            {% ifequal user.id ome.user_id %}
+                <img style="float:right" src="{% url mobile_static 'img/check-mark.png' %}" width=25 height=25 border=0/>
+            {% endifequal %}
+        </div>
+        
+    </a>
+{% endfor %}
+</div>
+
+
+{% endblock %}
+

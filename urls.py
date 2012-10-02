@@ -21,8 +21,7 @@ urlpatterns = patterns('',
     url( r'^recent_test/$', views.recent_full_page, name='webmobile_recent_full_page' ),
     
     # browsing P/D/I hierarchy
-    url( r'^projects/$', views.projects, name='webmobile_projects' ),
-    url( r'^projects/(?P<eid>[0-9]+)/$', views.projects, name='webmobile_projects' ),
+    url( r'^projects/$', views.projects, name='webmobile_projects' ),   # filtered by session 'group_id' & 'user_id'
     url( r'^project/(?P<id>[0-9]+)/$', views.project, name='webmobile_project' ),
     url( r'^project_details/(?P<id>[0-9]+)/$', views.object_details, {"obj_type": "project"}, name='webmobile_project_details' ),
     url( r'^dataset/(?P<id>[0-9]+)/$', views.dataset, name='webmobile_dataset' ),
@@ -39,9 +38,12 @@ urlpatterns = patterns('',
     url( r'^screens/(?P<eid>[0-9]+)/$', views.screens, name='webmobile_screens' ),
     url( r'^plate/(?P<id>[0-9]+)/$', views.plate, name='webmobile_plate' ),
     
-    url( r'^groups_members/$', views.groups_members, name='webmobile_groups_members' ),
-    # switch group, then redirect to index page
+    # choose group, then switch group (redirects to index page)
+    url( r'^choose_group/$', views.choose_group, name='webmobile_choose_group' ),
     url( r'^switch_group/(?P<groupId>[0-9]+)/$', views.switch_group, name='webmobile_switch_group' ),
+    # choose user from 'active_group', switch user redirects to home page
+    url( r'^choose_user/$', views.choose_user, name='webmobile_choose_user' ),
+    url( r'^switch_user/(?P<userId>[0-9]+)/$', views.switch_user, name='webmobile_switch_user' ),
     
     # add comment to 'project', 'dataset' or 'image', then redirect to object page
     url( r'^add_comment/(?P<obj_type>[a-z]+)/(?P<obj_id>[0-9]+)/$', views.add_comment, name='webmobile_add_comment' ),

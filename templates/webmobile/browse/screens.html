@@ -6,8 +6,7 @@
 
 {% block header-right %}
     {% if experimenter %}
-        Owned by: 
-        <a href="{% url webmobile_groups_members %}">{{ experimenter.getFullName }} ></a>
+        Owned by: {{ experimenter.getFullName }}
     {% endif %}
 {% endblock %}
 

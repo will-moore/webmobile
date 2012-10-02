@@ -16,21 +16,28 @@
 
 {% block body %}
 <div id="top-header">
-    <a href="{% url webmobile_index %}">
-        <div style="float:left"><img src="{% static 'webmobile/img/logo.png' %}" border=0 /></div>
-    </a>
-    <div id="top-header-right">
-        Group: <a href="{% url webmobile_groups_members %}">
-            {{ client.getEventContext.groupName }} >
+    <div style="float:left">
+        <a href="{% url webmobile_index %}">
+            <img src="{% static 'webmobile/img/logo.png' %}" border=0 />
         </a>
+        {% block header-title %}{% endblock %}
+    </div>
+    <div id="top-header-right">
+        {{ ome.user.getFullName }}
     </div>
     <div style="clear:both"></div>
 </div>
 
 <div class="header">
     <div id="header-title">
-        {% block header-title %}
-        {% endblock %}
+        Group:
+        <a href="{% url webmobile_choose_group %}">
+            {{ ome.active_group.getName }}
+        </a>
+        User:
+        <a href="{% url webmobile_choose_user %}">
+            {{ ome.active_user.getFullName }}
+        </a>
     </div>
     <div id='header-right'>{% block header-right %}{% endblock %}</div>
     <div style="clear:both"></div>

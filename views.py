@@ -3,6 +3,7 @@ from django.core.urlresolvers import reverse
 from django.shortcuts import render_to_response
 #from omeroweb.webgateway.views import getBlitzConnection, _session_logout
 from omeroweb.webclient.decorators import login_required
+from webmobile.decorators import render_response
 from omeroweb.webgateway import views as webgateway_views
 
 import settings
@@ -14,53 +15,53 @@ from webclient.webclient_gateway import OmeroWebGateway
 import webmobile_util
 
 logger = logging.getLogger(__name__)
-    
-
-# loginUrl = reverse("webmobile_login")
 
 
 @login_required()
-def groups_members(request, conn=None, **kwargs):
-    """
-    List the users of the current group - if permitted
-    """
-    groupId = conn.getEventContext().groupId
-    showMembers = True
-    if str(conn.getEventContext().groupPermissions) == "rw----":
-        showMembers = False
-    members = conn.containedExperimenters(groupId)
+@render_response()
+def choose_group(request, conn=None, **kwargs):
+    """ Show a list of all the user's groups - choose one to switch group """
+    if conn.isAdmin():  # Admin can see all groups
+        groups = [g for g in conn.getObjects("ExperimenterGroup") if g.getName() not in ("system", "user", "guest")]
+    else:
+        groups = list(conn.getGroupsMemberOf())
+    groups.sort(key=lambda x: x.getName().lower())
+    return {'template':'webmobile/perms/choose_group.html', 'groups': groups}
     
-    groups = []
-    perms = {"rw----":'private', "rwr---":'read-only', "rwrw--":'collaborative'}
-    for g in conn.getGroupsMemberOf():
-        try:
-            p = perms[str(g.getDetails().permissions)]
-        except KeyError:
-            p = ""
-        groups.append({
-            "id": g.id,
-            "name": g.getName(),
-            "permissions": p
-        })
-        
-    return render_to_response('webmobile/groups_members.html', {'client': conn, 'showMembers': showMembers, 
-        'members': members, 'groups': groups})
-    
-
 @login_required()
 def switch_group(request, groupId, conn=None, **kwargs):
     """
     Switch to the specified group, then redirect to index. 
     """
     
-    from webclient.views import change_active_group
-    try:
-        #change_active_group(request, kwargs={'conn': conn})
-        conn.changeActiveGroup(long(groupId))   # works except after viewing thumbnails in private group!
-    except:
-        logger.error(traceback.format_exc())
-        return HttpResponse(traceback.format_exc())
-        
+    from omeroweb.webclient.views import switch_active_group
+    switch_active_group(request)
+    # switch group - start showing user's own data
+    request.session.modified = True
+    request.session['user_id'] = conn.getUserId()
+
+    return HttpResponseRedirect(reverse('webmobile_index'))
+
+
+@login_required()
+@render_response()
+def choose_user(request, conn=None, **kwargs):
+    """ Show a list of all the users in the 'active_group' - choose one to switch group """
+    active_group = request.session.get('active_group', conn.getEventContext().groupId)
+    group = conn.getObject("ExperimenterGroup", active_group)
+    group.groupSummary()    # loads and sorts group.leaders & group.colleagues
+
+    return {'template':'webmobile/perms/choose_user.html', 'group': group}
+    
+@login_required()
+def switch_user(request, userId, conn=None, **kwargs):
+    """
+    Switch to the specified user, then redirect to index. 
+    """
+
+    request.session.modified = True
+    request.session['user_id'] = userId
+
     return HttpResponseRedirect(reverse('webmobile_index'))
 
 
@@ -86,17 +87,11 @@ def viewer_big(request, imageId, conn=None, **kwargs):
     
     
 @login_required(setGroupContext=True)
+@render_response()
 def projects (request, eid=None, conn=None, **kwargs):
     """ List the projects owned by the current user, or another user specified by eId """
     
-    #projects = filter(lambda x: x.isOwned(), conn.listProjects())
-    #eId = request.REQUEST.get('experimenter', None)
-    experimenter = None
-    if eid is not None:
-        experimenter = conn.getObject("Experimenter", eid)
-    else:
-        # show current user's projects by default
-        eid = conn.getEventContext().userId
+    eid = request.session.get('user_id', conn.getUserId())
         
     projs = conn.listProjects(eid=eid)
     projs = list(projs)
@@ -109,19 +104,20 @@ def projects (request, eid=None, conn=None, **kwargs):
     ods = conn.listOrphans("Dataset", eid=eid)
     orphanedDatasets = list(ods)
     
-    return render_to_response('webmobile/browse/projects.html',
-        { 'client':conn, 'projects':projs, 'datasets':orphanedDatasets, 'experimenter':experimenter })
+    return { 'template':'webmobile/browse/projects.html', 'projects':projs, 'datasets':orphanedDatasets }
 
 
 @login_required()
+@render_response()
 def project(request, id, conn=None, **kwargs):
     """ Show datasets belonging to the specified project """
     
     prj = conn.getObject("Project", id)
-    return render_to_response('webmobile/browse/project.html', {'client':conn, 'project':prj})
+    return {'template':'webmobile/browse/project.html', 'project':prj}
 
 
 @login_required()
+@render_response()
 def object_details(request, obj_type, id, conn=None, **kwargs):
     """ Show project/dataset details: Name, description, owner, annotations etc """
 
@@ -135,27 +131,29 @@ def object_details(request, obj_type, id, conn=None, **kwargs):
     
     parent = obj.getParent()
     
-    return render_to_response('webmobile/browse/object_details.html', {'client': conn, 'object': obj, 'title': title, 
-        'annotations':anns, 'obj_type': obj_type})
+    return {'template':'webmobile/browse/object_details.html', 'object': obj, 'title': title, 
+        'annotations':anns, 'obj_type': obj_type}
 
 
 @login_required()
+@render_response()
 def dataset(request, id, conn=None, **kwargs):
     """ Show images in the specified dataset """
 
     ds = conn.getObject("Dataset", id)
-    return render_to_response('webmobile/browse/dataset.html', {'client': conn, 'dataset': ds})
+    return {'template': 'webmobile/browse/dataset.html', 'dataset': ds}
     
         
 @login_required()
+@render_response()
 def image(request, imageId, conn=None, **kwargs):
     """ Show image summary: Name, dimensions, large thumbnail, description, annotations """
 
     img = conn.getObject("Image", imageId)
     anns = getAnnotations(img)
     
-    return render_to_response('webmobile/browse/image.html', {'client': conn, 'object':img, 'obj_type':'image',
-        'annotations': anns})
+    return {'template': 'webmobile/browse/image.html', 'object':img, 'obj_type':'image',
+        'annotations': anns}
     
 @login_required()
 def orphaned_images(request, eid, conn=None, **kwargs):
@@ -313,13 +311,14 @@ def logout (request):
     return HttpResponseRedirect(reverse("webmobile_index"))
 
 @login_required()
+@render_response()
 def index (request, eid=None, conn=None, **kwargs):
 
     experimenter = None
     if eid is not None:
         experimenter = conn.getObject("Experimenter", eid)
       
-    return render_to_response('webmobile/index.html', {'client': conn, 'experimenter': experimenter})
+    return {'client': conn, 'experimenter': experimenter, 'template':'webmobile/index.html'}
 
 
 @login_required()

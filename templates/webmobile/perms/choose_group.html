@@ -1,0 +1,43 @@
+{% extends "webmobile/base/base_header.html" %}
+
+{% block title %} Choose Group {% endblock %}
+
+
+{% block header-title %}
+    Choose Group
+{% endblock %}
+
+{% block content %}
+
+
+<div class="list-container">
+{% for grp in groups %}
+    <a href="{% url webmobile_switch_group grp.id %}?active_group={{ grp.id }}">
+        <div class="{% ifequal grp.id ome.active_group.id %} item-selected {% else %} item-name {% endifequal %}">
+            
+            <img
+            {% if grp.getDetails.getPermissions.isGroupWrite %} src="{% static 'webclient/image/group_green16.png' %}"
+            {% else %}
+                {% if grp.getDetails.getPermissions.isGroupAnnotate %} src="{% static "webclient/image/group_orange16.png" %}"
+                {% else %}
+                    {% if grp.details.permissions.isGroupRead %} src="{% static "webclient/image/group_red16.png" %}"
+                    {% else %}
+                        src="{% static "webclient/image/personal16.png" %}"
+                    {% endif %}
+                {% endif %}
+            {% endif %} />
+            
+            {{ grp.name }}
+            
+            {% ifequal grp.id ome.active_group.id %}
+                <img style="float:right" src="{% url mobile_static 'img/check-mark.png' %}" width=25 height=25 border=0/>
+            {% endifequal %}
+        </div>
+        
+    </a>
+{% endfor %}
+</div>
+
+
+{% endblock %}
+

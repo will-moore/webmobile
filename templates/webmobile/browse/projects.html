@@ -4,12 +4,6 @@
     Projects:
 {% endblock %}
 
-{% block header-right %}
-    {% if experimenter %}
-        Owned by: 
-        <a href="{% url webmobile_groups_members %}">{{ experimenter.getFullName }} ></a>
-    {% endif %}
-{% endblock %}
 
 {% block content %}
 <div class='bottom-header'>
@@ -50,11 +44,8 @@
     </div>
 {% endif %}
 
-{% if experimenter %}
-    <a href="{% url webmobile_orphaned_images experimenter.id %}">
-{% else %}
-    <a href="{% url webmobile_orphaned_images client.getEventContext.userId %}">
-{% endif %}
+
+    <a href="{% url webmobile_orphaned_images ome.user_id %}">
         <div class="list-item" style="background:#ddd">
             <div class="item-name">Orphaned Images</div>
         </div>
