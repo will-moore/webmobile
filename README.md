@@ -28,8 +28,3 @@ Install the latest version of OMERO.server and OMERO.web and then:
     unzip master.zip
     mv openmicroscopy-webmobile-* webmobile
     path/to/bin/omero config set omero.web.apps '["webmobile"]'
-
-You can then configure OMERO.webmobile as per normal:
-
-* http://trac.openmicroscopy.org/ome/wiki/OmeroWebMobile
-
